@@ -1,7 +1,8 @@
 from core.state import State, rollback
-from core.engine import execute_command, Command
 from core.ops import OPERATIONS
 from core.render import RenderStore
+from core.engine import Command, step
+
 
 OP_ALIASES = {
     "+": "add",
@@ -30,21 +31,18 @@ def parse(line: str) -> Command:
     return Command(op="push", args={"value": line})
 
 
-def print_state(state: State, renderer: RenderStore):
+def print_state(view_state):
     print("STACK:")
 
-    n = len(state.stack)
+    n = len(view_state.stack)
 
-    for i, nid in enumerate(state.stack):
-        rendered = renderer.get(state, nid)
-        lines = rendered.pretty.splitlines()
+    for i, node in enumerate(view_state.stack):
+        lines = node.pretty.splitlines()
 
         idx = n - 1 - i
 
-        # первая строка с индексом
         print(f"[{idx}] {lines[0]}")
 
-        # остальные строки с выравниванием
         pad = " " * (len(f"[{idx}] ") )
 
         for line in lines[1:]:
@@ -54,9 +52,8 @@ def print_state(state: State, renderer: RenderStore):
 
     print("ENV:")
 
-    for k, nid in state.env.items():
-        rendered = renderer.get(state, nid)
-        print(f"{k} -> {rendered.pretty}")
+    for k, node in view_state.env.items():
+        print(f"{k} -> {node.pretty}")
 
     print("-" * 40)
 
@@ -65,7 +62,7 @@ def repl():
     state = State()
     renderer = RenderStore()
 
-    print("RPN VM REPL (implicit push mode)")
+    print("RPN SYSTEM REPL (step API)")
     print("Type 'exit' or 'quit' to stop")
     print("Available ops:", ", ".join(OPERATIONS.keys()))
     print("Runtime: undo")
@@ -78,23 +75,17 @@ def repl():
             if line in ("exit", "quit"):
                 break
 
-            if line == "undo":
-                rollback(state)
-                print("[UNDO]")
-                print_state(state, renderer)
-                continue
-
             cmd = parse(line)
-            execute_command(state, cmd)
 
-            print_state(state, renderer)
+            result = step(state, cmd, renderer)
+
+            print_state(result.view)
+
+            if result.error:
+                print(f"[ERROR] {result.error}")
 
         except Exception as e:
-            match type(e).__name__:
-                case "StackUnderflowError":
-                    print("[STACK ERROR] not enough operands for operation")
-                case _:
-                    print(f"ERROR: {type(e).__name__}: {e}")
+            print(f"FATAL ERROR: {type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":
