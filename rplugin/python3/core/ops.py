@@ -1,5 +1,6 @@
 from sympy import Expr, sympify, Symbol
 from sympy.parsing.latex import parse_latex
+from latex2sympy2 import latex2sympy
 from core.errors import StackUnderflowError, SympyError, StackOperandError
 from core.state import State, push_result
 
@@ -56,6 +57,14 @@ class SubOperation(BinaryOperation):
     def apply(self, a, b):
         return a - b
 
+@register("drop")
+class DropOperation(Operation):
+    def execute(self, state: State, **args):
+        if not state.stack:
+            raise StackUnderflowError("drop: empty stack")
+
+        state.stack.pop()
+
 @register("push")
 class PushOperation(Operation):
     def execute(self, state, **args):
@@ -71,7 +80,7 @@ class PushOperation(Operation):
                     expr = sympify(raw)
 
                 case "latex":
-                    expr = parse_latex(raw)
+                    expr = latex2sympy(raw)
 
                 case _:
                     raise ValueError(f"unknown format: {fmt}")
