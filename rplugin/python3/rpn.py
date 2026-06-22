@@ -35,6 +35,8 @@ class RpnPlugin:
             "/": ":Rpn /<CR>",
             "<CR>" : ":RpnRepeatLast<CR>",
             "." : ":RpnRepeatLast<CR>",
+            "dd": ":Rpn drop<CR>",
+            "<BS>": ":Rpn drop<CR>",
         }
 
         for lhs, rhs in maps.items():
@@ -48,6 +50,9 @@ class RpnPlugin:
 
         maps = {
             "i": ":Rpn ",
+            "I": ":Rpn ",
+            "a": ":Rpn ",
+            "A": ":Rpn ",
         }
         for lhs, rhs in maps.items():
             self.nvim.api.buf_set_keymap(
