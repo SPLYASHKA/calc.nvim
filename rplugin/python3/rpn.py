@@ -9,6 +9,7 @@ OP_ALIASES = {
     "+": "add",
     "*": "mul",
     "-": "sub",
+    "/": "div",
     "!": "store",
     "@": "subst",
 }
@@ -33,10 +34,11 @@ class RpnPlugin:
             "-": ":Rpn -<CR>",
             "*": ":Rpn *<CR>",
             "/": ":Rpn /<CR>",
-            "<CR>" : ":RpnRepeatLast<CR>",
+            "<CR>" : ":Rpn dup<CR>",
             "." : ":RpnRepeatLast<CR>",
             "dd": ":Rpn drop<CR>",
             "<BS>": ":Rpn drop<CR>",
+            "!": ":Rpn store<CR>",
         }
 
         for lhs, rhs in maps.items():
