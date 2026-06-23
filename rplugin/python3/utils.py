@@ -1,13 +1,18 @@
 from pynvim import Nvim
 
 def _notify(nvim: Nvim, msg: str, log_level: str) -> None:
-    lua = f"""
-        vim.schedule_wrap(function()
-            vim.notify([[[Calc] {msg}]], vim.log.levels.{log_level}, {{}})
-        end)()
-    """
-    nvim.exec_lua(lua)
+    nvim.exec_lua(
+        """
+        local msg = ...
+        local level = ...
 
+        vim.schedule(function()
+            vim.notify(msg, vim.log.levels[level], {})
+        end)
+        """,
+        f"[Calc] {msg}",
+        log_level,
+    )
 
 def notify_info(nvim: Nvim, msg: str) -> None:
     """Use the vim.notify API to display an info message."""

@@ -2,7 +2,7 @@ from pynvim import plugin, command
 
 from core import State, Command, step, RenderStore
 from core.ops import OPERATIONS
-from utils import notify_error
+from utils import notify_error, notify_info
 
 
 OP_ALIASES = {
@@ -39,6 +39,7 @@ class CalcPlugin:
             "dd": ":Calc drop<CR>",
             "<BS>": ":Calc drop<CR>",
             "!": ":Calc store<CR>",
+            "yl": ":CalcCopyLatex<CR>",
         }
 
         for lhs, rhs in maps.items():
@@ -331,6 +332,22 @@ class CalcPlugin:
             return
 
         self.nvim.out_write(f"NID: {nid}\n")
+        return nid
+
+    @command("CalcCopyLatex", nargs=0)
+    def calc_copy_latex(self):
+        nid = self.calc_lookup()
+
+        if nid is None:
+            return
+
+        # NOTE: не очень хорошо, что напрямую с renderer взаимодействую
+        latex = self.renderer.get(self.state, nid).latex
+
+        self.nvim.funcs.setreg('@', latex) # nvim clipboard
+        self.nvim.funcs.setreg('+', latex) # system clipboard
+
+        notify_info(self.nvim, "LaTex copied: " + latex)
 
     @command("CalcPushLatexVisual", range="")
     def calc_latex(self, _):
