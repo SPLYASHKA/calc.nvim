@@ -13,9 +13,9 @@ class ViewState:
     stack: list[ViewNode]
     env: dict[str, ViewNode]
 
-from core.render import RenderStore
-from core.state import State
-from core.view import ViewNode, ViewState
+from .render import RenderStore
+from .state import State
+from .view import ViewNode, ViewState
 
 
 def build_view(state: State, renderer: RenderStore) -> ViewState:

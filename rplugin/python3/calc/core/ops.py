@@ -1,8 +1,8 @@
 from sympy import Expr, sympify, Symbol
 from sympy.parsing.latex import parse_latex
 from latex2sympy2 import latex2sympy
-from core.errors import StackUnderflowError, SympyError, StackOperandError
-from core.state import State, push_result
+from .errors import StackUnderflowError, SympyError, StackOperandError
+from .state import State, push_result
 
 class Operation:
     def execute(self, state: State, **args) -> None:

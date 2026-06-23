@@ -1,7 +1,7 @@
-from core.state import State, snapshot_state, rollback
-from core.ops import OPERATIONS
-from core.render import RenderStore
-from core.view import build_view
+from .state import State, snapshot_state, rollback
+from .ops import OPERATIONS
+from .render import RenderStore
+from .view import build_view
 
 from dataclasses import dataclass
 
@@ -22,7 +22,7 @@ def execute_command(state: State, command: Command):
         raise
 
 from typing import Optional
-from core.view import ViewState
+from .view import ViewState
 
 
 @dataclass(frozen=True)

@@ -1,8 +1,8 @@
 from pynvim import plugin, command
 
-from core import State, Command, step, RenderStore
-from core.ops import OPERATIONS
-from utils import notify_error, notify_info
+from calc.core import State, Command, step, RenderStore
+from calc.core.ops import OPERATIONS
+from calc.utils import notify_error, notify_info
 
 
 OP_ALIASES = {
