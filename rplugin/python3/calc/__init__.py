@@ -49,6 +49,7 @@ class CalcPlugin:
             "!": ":Calc store<CR>",
             "yl": ":CalcCopyLatex<CR>",
             "I": ":CalcLatex<CR>",
+            "s": ":Calc swap<CR>"
         }
 
         for lhs, rhs in maps.items():
@@ -149,7 +150,9 @@ class CalcPlugin:
             self.ui.ns,
             [row, 0],
             [row, -1],
-            {}
+            {
+                "overlap": True
+            }
         )
 
         if not marks:
