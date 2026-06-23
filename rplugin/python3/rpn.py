@@ -16,7 +16,7 @@ OP_ALIASES = {
 
 
 @plugin
-class RpnPlugin:
+class CalcPlugin:
     def __init__(self, nvim):
         self.nvim = nvim
 
@@ -24,21 +24,21 @@ class RpnPlugin:
         self.renderer = RenderStore()
 
         self.buf = None
-        self.ns = self.nvim.api.create_namespace("rpn")
+        self.ns = self.nvim.api.create_namespace("calc")
         self.extmark_to_nid = {}
         self.last_cmd = None
 
     def setup_keymaps(self):
         maps = {
-            "+": ":Rpn +<CR>",
-            "-": ":Rpn -<CR>",
-            "*": ":Rpn *<CR>",
-            "/": ":Rpn /<CR>",
-            "<CR>" : ":Rpn dup<CR>",
-            "." : ":RpnRepeatLast<CR>",
-            "dd": ":Rpn drop<CR>",
-            "<BS>": ":Rpn drop<CR>",
-            "!": ":Rpn store<CR>",
+            "+": ":Calc +<CR>",
+            "-": ":Calc -<CR>",
+            "*": ":Calc *<CR>",
+            "/": ":Calc /<CR>",
+            "<CR>" : ":Calc dup<CR>",
+            "." : ":CalcRepeatLast<CR>",
+            "dd": ":Calc drop<CR>",
+            "<BS>": ":Calc drop<CR>",
+            "!": ":Calc store<CR>",
         }
 
         for lhs, rhs in maps.items():
@@ -51,10 +51,10 @@ class RpnPlugin:
             )
 
         maps = {
-            "i": ":Rpn ",
-            "I": ":Rpn ",
-            "a": ":Rpn ",
-            "A": ":Rpn ",
+            "i": ":Calc ",
+            "I": ":Calc ",
+            "a": ":Calc ",
+            "A": ":Calc ",
         }
         for lhs, rhs in maps.items():
             self.nvim.api.buf_set_keymap(
@@ -70,7 +70,7 @@ class RpnPlugin:
                     self.buf,
                     "n",
                     d,
-                    f":Rpn {d}",
+                    f":Calc {d}",
                     {"silent": False},
                     )
 
@@ -83,7 +83,7 @@ class RpnPlugin:
     def ensure_buffer(self):
         if self.buf is None:
             self.buf = self.nvim.api.create_buf(False, True)
-            self.nvim.api.buf_set_name(self.buf, "RPN")
+            self.nvim.api.buf_set_name(self.buf, "CALC")
 
             # UI semantics
             self.nvim.api.buf_set_option(self.buf, "filetype", "markdown")
@@ -127,8 +127,8 @@ class RpnPlugin:
     # -------------------------
     # entrypoint
     # -------------------------
-    @command("Rpn", nargs=1)
-    def rpn(self, args):
+    @command("Calc", nargs=1)
+    def calc(self, args):
         self.ensure_buffer()
 
         cmd = self.parse(args[0])
@@ -305,8 +305,8 @@ class RpnPlugin:
     #             }
     #         )
 
-    @command("RpnLookup", nargs=0)
-    def rpn_lookup(self):
+    @command("CalcLookup", nargs=0)
+    def calc_lookup(self):
         row, _ = self.nvim.current.window.cursor
         row -= 1 # to 0-based
 
@@ -332,8 +332,8 @@ class RpnPlugin:
 
         self.nvim.out_write(f"NID: {nid}\n")
 
-    @command("RpnLatex", range="")
-    def rpn_latex(self, _):
+    @command("CalcPushLatexVisual", range="")
+    def calc_latex(self, _):
         # lineno_begin, colno_begin = self.nvim.api.buf_get_mark(0, "<")
         # lineno_end, colno_end = self.nvim.api.buf_get_mark(0, ">")
         _, lineno_begin, colno_begin, _ = self.nvim.funcs.getpos("'<")
@@ -386,7 +386,7 @@ class RpnPlugin:
             + lines[1:-1]
             + [lines[-1][:c2]]
         )
-    @command("RpnRepeatLast", nargs=0)
+    @command("CalcRepeatLast", nargs=0)
     def repeat_last(self):
         if self.last_cmd is None:
             self.nvim.out_write("No previous command\n")
