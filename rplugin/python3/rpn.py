@@ -24,6 +24,7 @@ class CalcPlugin:
         self.renderer = RenderStore()
 
         self.buf = None
+        self.stack_win = None
         self.ns = self.nvim.api.create_namespace("calc")
         self.extmark_to_nid = {}
         self.last_cmd = None
@@ -40,6 +41,7 @@ class CalcPlugin:
             "<BS>": ":Calc drop<CR>",
             "!": ":Calc store<CR>",
             "yl": ":CalcCopyLatex<CR>",
+            "I": ":CalcLatex<CR>",
         }
 
         for lhs, rhs in maps.items():
@@ -53,7 +55,6 @@ class CalcPlugin:
 
         maps = {
             "i": ":Calc ",
-            "I": ":Calc ",
             "a": ":Calc ",
             "A": ":Calc ",
         }
@@ -97,6 +98,7 @@ class CalcPlugin:
 
             # open split
             self.nvim.command("vsplit")
+            self.stack_win = self.nvim.current.window
             self.nvim.api.win_set_buf(0, self.buf)   #         self.nvim.api.win_set_buf(0, self.buf)
 
             self.setup_keymaps()
@@ -165,7 +167,8 @@ class CalcPlugin:
         stack = result.view.stack
         top_i = len(stack) - 1
 
-        self.nvim.current.window.cursor = (top_i + 3, 1)
+        # self.nvim.current.window.cursor = (top_i + 3, 1)
+        self.nvim.api.win_set_cursor(self.stack_win, (top_i + 3, 0))
 
         # -------------------------
         # extmarks
@@ -410,3 +413,71 @@ class CalcPlugin:
             return
 
         self._run(self.last_cmd)
+
+    def open_latex_float(self):
+        buf = self.nvim.api.create_buf(False, True)
+
+        self.nvim.api.buf_set_option(buf, "filetype", "tex")
+
+        template = [
+            "$$",
+            "",
+            "$$"
+        ]
+
+        self.nvim.api.buf_set_lines(buf, 0, -1, False, template)
+
+        width = 60
+        height = 10
+
+        win = self.nvim.api.open_win(
+            buf,
+            True,
+            {
+                "relative": "editor",
+                "width": width,
+                "height": height,
+                "row": 5,
+                "col": 10,
+                "style": "minimal",
+                "border": "rounded",
+            }
+        )
+
+        self.latex_buf = buf
+        self.latex_win = win
+
+        self.nvim.api.win_set_cursor(win, (2, 0))
+
+        self.nvim.api.buf_set_keymap(buf, "n", "<C-c>", "<Esc>:bd!<CR>", {"silent": True})
+        # ENTER = commit
+        self.nvim.api.buf_set_keymap(
+            buf,
+            "n",
+            "<CR>",
+            ":CalcCommitLatex<CR>",
+            {"silent": True}
+            )
+
+        self.nvim.command("startinsert")
+
+    @command("CalcLatex", nargs=0)
+    def calc_latexx(self):
+        self.open_latex_float()
+
+    @command("CalcCommitLatex", nargs=0)
+    def calc_commit_latex(self):
+        buf = self.latex_buf
+
+        lines = self.nvim.api.buf_get_lines(buf, 0, -1, False)
+        latex = "\n".join(lines)
+
+        cmd = Command(
+            op="push",
+            args={"value": latex, "format": "latex"}
+        )
+
+        self._run(cmd)
+
+        # close float
+        self.nvim.api.win_close(self.latex_win, True)
