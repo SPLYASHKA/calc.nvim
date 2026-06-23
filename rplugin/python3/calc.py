@@ -414,6 +414,7 @@ class CalcPlugin:
 
         self._run(self.last_cmd)
 
+    @command("CalcLatex", nargs=0)
     def open_latex_float(self):
         buf = self.nvim.api.create_buf(False, True)
 
@@ -444,9 +445,6 @@ class CalcPlugin:
             }
         )
 
-        self.latex_buf = buf
-        self.latex_win = win
-
         self.nvim.api.win_set_cursor(win, (2, 0))
 
         self.nvim.api.buf_set_keymap(buf, "n", "<C-c>", "<Esc>:bd!<CR>", {"silent": True})
@@ -461,15 +459,9 @@ class CalcPlugin:
 
         self.nvim.command("startinsert")
 
-    @command("CalcLatex", nargs=0)
-    def calc_latexx(self):
-        self.open_latex_float()
-
     @command("CalcCommitLatex", nargs=0)
     def calc_commit_latex(self):
-        buf = self.latex_buf
-
-        lines = self.nvim.api.buf_get_lines(buf, 0, -1, False)
+        lines = self.nvim.api.buf_get_lines(0, 0, -1, False)
         latex = "\n".join(lines)
 
         cmd = Command(
@@ -480,4 +472,4 @@ class CalcPlugin:
         self._run(cmd)
 
         # close float
-        self.nvim.api.win_close(self.latex_win, True)
+        self.nvim.api.win_close(0, True)
