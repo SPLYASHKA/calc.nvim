@@ -23,7 +23,7 @@ class Layout:
     cursor: tuple[int, int] | None
 
 def render(ctx: RenderContext, result):
-    render_pretty(ctx, result)
+    render_hybrid(ctx, result)
 
 def commit(ctx: RenderContext, layout: Layout):
     ctx.nvim.api.buf_set_lines(ctx.buf, 0, -1, False, layout.lines)
@@ -49,7 +49,7 @@ def _append_lines(layout: Layout, lines, start):
     return start + len(lines)
 
 def stack_header(layout: Layout, cursor):
-    lines = ["STACK"]
+    lines = ["## STACK"]
     return _append_lines(layout, lines, cursor)
 
 def stack_pretty(layout: Layout, result, cursor):
@@ -71,7 +71,7 @@ def stack_pretty(layout: Layout, result, cursor):
     _append_lines(layout, lines, start_render)
     # set extmarks
     for i, (nid, start, end) in enumerate(node_ranges):
-        ui_index = len(node_ranges) - 1 - i
+        ui_index = len(node_ranges) - i
 
         hl = "Tag" if i % 2 == 0 else "String"
 
@@ -88,6 +88,55 @@ def stack_pretty(layout: Layout, result, cursor):
             },
             nid
             ))
+    return cursor
+
+def stack_hybrid(layout: Layout, result, cursor):
+    node_ranges = []
+
+    for node in result.view.stack:
+        start = cursor
+
+        layout.lines.append(f"$${node.latex}$$")
+
+        cursor += 1
+        end = cursor - 1
+
+        node_ranges.append((node, start, end))
+
+    for i, (node, start, end) in enumerate(node_ranges):
+        ui_index = len(node_ranges) - i
+
+        hl = "Tag" if i % 2 == 0 else "String"
+
+        pretty_lines = [
+            [(line, "Macro")]
+            for line in node.pretty.splitlines()
+        ]
+
+        layout.extmarks.append(
+            ExtmarkSpec(
+                start,
+                0,
+                {
+                    "end_row": end,
+                    "end_col": -1,
+                    "strict": False,
+                    "hl_group": hl,
+
+                    "virt_lines": pretty_lines,
+                    # "virt_lines_above": True,
+
+                    "virt_text": [
+                        [f" [nid: {node.nid}]", "Comment"],
+                        [f"[{ui_index}]", "Number"],
+                    ],
+                    "virt_text_pos": "right_align",
+                     "conceal": "",
+                },
+                node.nid,
+            )
+        )
+
     return cursor
 
 def dot(layout: Layout, cursor):
@@ -111,7 +160,7 @@ def dot(layout: Layout, cursor):
 
 def env_pretty(layout: Layout, result, cursor):
     # TODO: ugly, do better
-    lines = ["ENV"]
+    lines = ["## ENV"]
 
     for name, node in result.view.env.items():
         lines.append(f"{name} =")
@@ -123,6 +172,25 @@ def env_pretty(layout: Layout, result, cursor):
         lines.append(f"ERROR: {result.error}")
 
     return _append_lines(layout, lines, cursor)
+
+def render_hybrid(ctx: RenderContext, result):
+    layout = Layout(
+            lines = [],
+            extmarks = [],
+            cursor = None,
+            )
+
+    cursor = 0 # 0-based
+    cursor = stack_header(layout, cursor)
+    cursor = stack_hybrid(layout, result, cursor)
+    cursor = dot(layout, cursor)
+    cursor = env_pretty(layout, result, cursor)
+    commit(ctx, layout)
+    ctx.nvim.api.win_set_option(
+            ctx.stack_win,
+            "conceallevel",
+            2,
+            )
 
 def render_pretty(ctx: RenderContext, result):
     layout = Layout(
@@ -137,3 +205,8 @@ def render_pretty(ctx: RenderContext, result):
     cursor = dot(layout, cursor)
     cursor = env_pretty(layout, result, cursor)
     commit(ctx, layout)
+    ctx.nvim.api.win_set_option(
+            ctx.stack_win,
+            "conceallevel",
+            2,
+            )
