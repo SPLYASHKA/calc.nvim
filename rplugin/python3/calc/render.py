@@ -1,4 +1,5 @@
 from typing import Protocol
+from dataclasses import dataclass
 from pynvim import Nvim
 
 class RenderContext(Protocol):
@@ -8,15 +9,54 @@ class RenderContext(Protocol):
     stack_win: object
     extmark_to_nid: dict[int, int]
 
+@dataclass
+class ExtmarkSpec:
+    line: int
+    col: int
+    opts: dict
+    nid: int | None
+
+@dataclass
+class Layout:
+    lines: list[str]
+    extmarks: list[ExtmarkSpec]
+    cursor: tuple[int, int] | None
+
 def render(ctx: RenderContext, result):
     render_pretty(ctx, result)
 
-def render_pretty(ctx: RenderContext, result):
+def commit(ctx: RenderContext, layout: Layout):
+    ctx.nvim.api.buf_set_lines(ctx.buf, 0, -1, False, layout.lines)
+    # clear extmarks
+    ctx.nvim.api.buf_clear_namespace(ctx.buf, ctx.ns, 0, -1)
+    ctx.extmark_to_nid = {}
+    # set extmarks
+    for mark in layout.extmarks:
+        mark_id = ctx.nvim.api.buf_set_extmark(
+            ctx.buf,
+            ctx.ns,
+            mark.line,
+            mark.col,
+            mark.opts
+        )
+        if mark.nid is not None:
+            ctx.extmark_to_nid[mark_id] = mark.nid
+    ctx.nvim.api.win_set_cursor(ctx.stack_win, layout.cursor) # 1-based
+
+
+def _append_lines(layout: Layout, lines, start):
+    layout.lines.extend(lines)
+    return start + len(lines)
+
+def stack_header(layout: Layout, cursor):
+    lines = ["STACK"]
+    return _append_lines(layout, lines, cursor)
+
+def stack_pretty(layout: Layout, result, cursor):
+    start_render = cursor
     lines = []
     node_ranges = []
-
-    lines.append("STACK")
-    cursor = 1 # 0-based
+    # TODO
 
     for node in result.view.stack:
         start = cursor
@@ -28,40 +68,14 @@ def render_pretty(ctx: RenderContext, result):
         end = cursor - 1
 
         node_ranges.append((node.nid, start, end))
-
-    dot_cursor = cursor
-
-    lines.append(".")
-    lines.append("")
-    lines.append("ENV")
-
-    for name, node in result.view.env.items():
-        lines.append(f"{name} =")
-        lines.extend(node.pretty.splitlines())
-
-    if result.error:
-        lines.append("")
-        lines.append(f"ERROR: {result.error}")
-
-    ctx.nvim.api.buf_set_lines(
-        ctx.buf, 0, -1, False, lines
-    )
-
-    ctx.nvim.api.win_set_cursor(ctx.stack_win, (dot_cursor + 1, 0)) # 1-based
-
-    # clear extmarks
-    ctx.nvim.api.buf_clear_namespace(ctx.buf, ctx.ns, 0, -1)
-    ctx.extmark_to_nid = {}
-
+    _append_lines(layout, lines, start_render)
     # set extmarks
     for i, (nid, start, end) in enumerate(node_ranges):
         ui_index = len(node_ranges) - 1 - i
 
         hl = "Tag" if i % 2 == 0 else "String"
 
-        mark_id = ctx.nvim.api.buf_set_extmark(
-            ctx.buf,
-            ctx.ns,
+        layout.extmarks.append(ExtmarkSpec(
             start,
             0,
             {
@@ -71,79 +85,55 @@ def render_pretty(ctx: RenderContext, result):
                 "hl_group": hl,
                 "virt_text": [[f" [nid: {nid}]", "Comment"], [f"[{ui_index}]", "Number"]],
                 "virt_text_pos": "right_align",
-            }
-        )
-        ctx.extmark_to_nid[mark_id] = nid
+            },
+            nid
+            ))
+    return cursor
 
-    ctx.nvim.api.buf_set_extmark(
-        ctx.buf,
-        ctx.ns,
+def dot(layout: Layout, cursor):
+    dot_cursor = cursor
+    lines = []
+    lines.append(".")
+    lines.append("")
+    cursor = _append_lines(layout, lines, cursor)
+    # set extmarks
+    layout.extmarks.append(ExtmarkSpec(
         dot_cursor,
         0,
         {
             "end_col": 1,
             "hl_group": "TermCursor"
-        }
-    )
+        },
+        None
+    ))
+    layout.cursor = (dot_cursor + 1, 0) # 1-based
+    return cursor
 
-def render_latex(ctx: RenderContext, result):
-    lines = []
-
-    # STACK
-    lines.append("STACK")
-
-    for node in result.view.stack:
-        lines.append(f"$${node.latex}$$")
-
-    lines.append(".")
-    lines.append("")
-    lines.append("ENV")
+def env_pretty(layout: Layout, result, cursor):
+    # TODO: ugly, do better
+    lines = ["ENV"]
 
     for name, node in result.view.env.items():
-        lines.append(f"$${name} = {node.latex}$$")
+        lines.append(f"{name} =")
+        block = node.pretty.splitlines()
+        lines.extend(block)
 
     if result.error:
         lines.append("")
         lines.append(f"ERROR: {result.error}")
 
-    ctx.nvim.api.buf_set_lines(
-        ctx.buf, 0, -1, False, lines
-    )
+    return _append_lines(layout, lines, cursor)
 
-    stack = result.view.stack
-    top_i = len(stack) - 1
+def render_pretty(ctx: RenderContext, result):
+    layout = Layout(
+            lines = [],
+            extmarks = [],
+            cursor = None,
+            )
 
-    # ctx.nvim.current.window.cursor = (top_i + 3, 1)
-    ctx.nvim.api.win_set_cursor(ctx.stack_win, (top_i + 3, 0))
-
-    # -------------------------
-    # extmarks
-    # -------------------------
-    ctx.nvim.api.buf_clear_namespace(ctx.buf, ctx.ns, 0, -1)
-    ctx.extmark_to_nid = {}
-
-
-    # nid marks
-    for i, node in enumerate(stack):
-        mark_id = ctx.nvim.api.buf_set_extmark(
-            ctx.buf,
-            ctx.ns,
-            i + 1,  # +1 because "STACK" header
-            0,
-            {
-                "virt_text": [[f"nid:{node.nid}", "Comment"]],
-                "virt_text_pos": "eol",
-                "line_hl_group": "Visual" if i == top_i else None,
-            }
-        )
-        ctx.extmark_to_nid[mark_id] = node.nid
-    ctx.nvim.api.buf_set_extmark(
-        ctx.buf,
-        ctx.ns,
-        top_i + 2,  # +1 because "STACK" header
-        0,
-        {
-            "end_col": 1,
-            "hl_group": "TermCursor"
-        }
-    )
+    cursor = 0 # 0-based
+    cursor = stack_header(layout, cursor)
+    cursor = stack_pretty(layout, result, cursor)
+    cursor = dot(layout, cursor)
+    cursor = env_pretty(layout, result, cursor)
+    commit(ctx, layout)
