@@ -169,7 +169,11 @@ def env_pretty(layout: Layout, result, cursor):
 
     if result.error:
         lines.append("")
-        lines.append(f"ERROR: {result.error}")
+        lines.append("ERROR:")
+
+        lines.extend(
+            str(result.error).splitlines()
+        )
 
     return _append_lines(layout, lines, cursor)
 
