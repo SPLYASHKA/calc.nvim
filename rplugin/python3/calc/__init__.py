@@ -1,19 +1,11 @@
 from pynvim import plugin, command
 
 from calc.core import State, Command, step, RenderStore
-from calc.core.ops import OPERATIONS
 from calc.utils import notify_error, notify_info
 
 from calc.render import render
+from calc.parse import parse
 
-OP_ALIASES = {
-    "+": "add",
-    "*": "mul",
-    "-": "sub",
-    "/": "div",
-    "!": "store",
-    "@": "subst",
-}
 
 class UIState:
     def __init__(self, nvim):
@@ -49,7 +41,8 @@ class CalcPlugin:
             "!": ":Calc store<CR>",
             "yl": ":CalcCopyLatex<CR>",
             "I": ":CalcLatex<CR>",
-            "s": ":Calc swap<CR>"
+            "s": ":Calc swap<CR>",
+            "u": ":Calc undo<CR>",
         }
 
         for lhs, rhs in maps.items():
@@ -63,8 +56,8 @@ class CalcPlugin:
 
         maps = {
             "i": ":Calc ",
-            "a": ":Calc ",
-            "A": ":Calc ",
+            "ad": ":Calc diff ",
+            "vD": ":Calc det<CR>",
         }
         for lhs, rhs in maps.items():
             self.nvim.api.buf_set_keymap(
@@ -104,38 +97,13 @@ class CalcPlugin:
             self.nvim.api.win_set_buf(0, self.ui.buf)
             self.setup_keymaps()
     # -------------------------
-    # latex wrapper
-    # -------------------------
-    def latex(self, expr: str, tag: int | None = None) -> str:
-        if tag is None:
-            return f"$${expr}$$"
-        return f"$${expr} \\tag{{{tag}}}$$"
-
-    # -------------------------
-    # parsing
-    # -------------------------
-    def parse(self, token: str) -> Command:
-        token = token.strip()
-
-        if token == "undo":
-            return Command(op="__undo__", args={})
-
-        if token in OP_ALIASES:
-            return Command(op=OP_ALIASES[token], args={})
-
-        if token in OPERATIONS:
-            return Command(op=token, args={})
-
-        return Command(op="push", args={"value": token})
-
-    # -------------------------
     # entrypoint
     # -------------------------
     @command("Calc", nargs=1)
     def calc(self, args):
         self.ensure_buffer()
 
-        cmd = self.parse(args[0])
+        cmd = parse(args[0])
 
         self._run(cmd)
 

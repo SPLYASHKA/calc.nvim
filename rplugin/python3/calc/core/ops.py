@@ -183,3 +183,38 @@ class EvalOperation(Operation):
         result = expr.subs(subs_map)
 
         push_result(state, result)
+
+@register("diff")
+class DiffOperation(Operation):
+    def execute(self, state: State, **args):
+        expr = pop_expr(state)
+
+        raw_args = args.get("wrt", []) # with respect to
+
+        diff_args = []
+
+        for item in raw_args:
+            if isinstance(item, str):
+                diff_args.append(Symbol(item))
+            else:
+                diff_args.append(int(item))
+
+        try:
+            result = expr.diff(*diff_args)
+        except Exception as e:
+            raise SympyError(str(e))
+
+        push_result(state, result)
+
+@register("det")
+class DetOperation(Operation):
+    def execute(self, state: State, **args):
+        expr = pop_expr(state)
+
+        try:
+            result = expr.det()
+        except Exception as e:
+            raise SympyError(
+                str(e) or type(e).__name__
+            )
+        push_result(state, result)
