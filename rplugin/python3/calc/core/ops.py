@@ -194,10 +194,10 @@ class DiffOperation(Operation):
         diff_args = []
 
         for item in raw_args:
-            if isinstance(item, str):
-                diff_args.append(Symbol(item))
-            else:
+            if item.isdigit():
                 diff_args.append(int(item))
+            else:
+                diff_args.append(Symbol(item))
 
         try:
             result = expr.diff(*diff_args)
