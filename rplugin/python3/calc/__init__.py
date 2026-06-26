@@ -3,7 +3,7 @@ from pynvim import plugin, command
 from calc.core import State, Command, step, RenderStore
 from calc.utils import notify_error, notify_info
 
-from calc.render import render
+from calc.render import build_layout, apply
 from calc.parse import parse
 
 
@@ -11,7 +11,6 @@ class UIState:
     def __init__(self, nvim):
         self.nvim = nvim
         self.buf = self.nvim.api.create_buf(False, True)
-        self.stack_win = None
         self.ns = self.nvim.api.create_namespace("calc")
         self.extmark_to_nid = {}
 
@@ -78,24 +77,38 @@ class CalcPlugin:
                     )
 
     def _run(self, cmd: Command):
+        win = self.ensure_window()
+
         result = step(self.state, cmd, self.renderer)
 
         self.last_cmd = cmd
         assert self.ui is not None
-        render(self.ui, result)
+        layout = build_layout(result)
+        apply(self.ui, layout, win)
 
     def ensure_buffer(self):
         if self.ui is None:
             self.ui = UIState(self.nvim)
 
-            self.nvim.command("vsplit")
-            self.ui.stack_win = self.nvim.current.window
-
             self.nvim.api.buf_set_name(self.ui.buf, "CALC")
             self.nvim.api.buf_set_option(self.ui.buf, "filetype", "markdown")
 
-            self.nvim.api.win_set_buf(0, self.ui.buf)
             self.setup_keymaps()
+
+    def ensure_window(self):
+        assert self.ui is not None
+        buf = self.ui.buf
+
+        for win in self.nvim.api.list_wins():
+            if self.nvim.api.win_get_buf(win) == buf:
+                return win
+
+        self.nvim.command("vsplit")
+        win = self.nvim.current.window
+
+        self.nvim.api.win_set_buf(win, buf)
+
+        return win
     # -------------------------
     # entrypoint
     # -------------------------
@@ -106,6 +119,9 @@ class CalcPlugin:
         cmd = parse(args[0])
 
         self._run(cmd)
+
+        win = self.ensure_window()
+        self.nvim.api.set_current_win(win)
 
     @command("CalcLookup", nargs=0)
     def calc_lookup(self):
@@ -271,6 +287,4 @@ class CalcPlugin:
         )
 
         self._run(cmd)
-
-        # close float
         self.nvim.api.win_close(0, True)

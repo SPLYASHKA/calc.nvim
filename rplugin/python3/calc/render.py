@@ -6,7 +6,6 @@ class RenderContext(Protocol):
     nvim: Nvim
     buf: int
     ns: int
-    stack_win: object
     extmark_to_nid: dict[int, int]
 
 @dataclass
@@ -22,15 +21,19 @@ class Layout:
     extmarks: list[ExtmarkSpec]
     cursor: tuple[int, int] | None
 
-def render(ctx: RenderContext, result):
-    render_hybrid(ctx, result)
+def build_layout(result):
+    layout = Layout(lines=[], extmarks=[], cursor=None)
+    cursor = 0
+    cursor = stack_header(layout, cursor)
+    cursor = stack_hybrid(layout, result, cursor)
+    cursor = dot(layout, cursor)
+    cursor = env_pretty(layout, result, cursor)
+    return layout
 
-def commit(ctx: RenderContext, layout: Layout):
+def apply(ctx: RenderContext, layout: Layout, win):
     ctx.nvim.api.buf_set_lines(ctx.buf, 0, -1, False, layout.lines)
-    # clear extmarks
     ctx.nvim.api.buf_clear_namespace(ctx.buf, ctx.ns, 0, -1)
     ctx.extmark_to_nid = {}
-    # set extmarks
     for mark in layout.extmarks:
         mark_id = ctx.nvim.api.buf_set_extmark(
             ctx.buf,
@@ -41,7 +44,8 @@ def commit(ctx: RenderContext, layout: Layout):
         )
         if mark.nid is not None:
             ctx.extmark_to_nid[mark_id] = mark.nid
-    ctx.nvim.api.win_set_cursor(ctx.stack_win, layout.cursor) # 1-based
+    ctx.nvim.api.win_set_cursor(win, layout.cursor)
+    ctx.nvim.api.win_set_option(win, "conceallevel", 2)
 
 
 def _append_lines(layout: Layout, lines, start):
@@ -177,40 +181,4 @@ def env_pretty(layout: Layout, result, cursor):
 
     return _append_lines(layout, lines, cursor)
 
-def render_hybrid(ctx: RenderContext, result):
-    layout = Layout(
-            lines = [],
-            extmarks = [],
-            cursor = None,
-            )
 
-    cursor = 0 # 0-based
-    cursor = stack_header(layout, cursor)
-    cursor = stack_hybrid(layout, result, cursor)
-    cursor = dot(layout, cursor)
-    cursor = env_pretty(layout, result, cursor)
-    commit(ctx, layout)
-    ctx.nvim.api.win_set_option(
-            ctx.stack_win,
-            "conceallevel",
-            2,
-            )
-
-def render_pretty(ctx: RenderContext, result):
-    layout = Layout(
-            lines = [],
-            extmarks = [],
-            cursor = None,
-            )
-
-    cursor = 0 # 0-based
-    cursor = stack_header(layout, cursor)
-    cursor = stack_pretty(layout, result, cursor)
-    cursor = dot(layout, cursor)
-    cursor = env_pretty(layout, result, cursor)
-    commit(ctx, layout)
-    ctx.nvim.api.win_set_option(
-            ctx.stack_win,
-            "conceallevel",
-            2,
-            )
