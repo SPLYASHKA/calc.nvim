@@ -25,8 +25,11 @@ def parse_diff(tail: list[str]) -> dict:
 def parse_pick(tail: list[str]) -> dict:
     if not tail:
         return {}
-    # user-facing 1-based → core 0-based
-    return {"index": str(int(tail[0]) - 1)}
+    try:
+        # user-facing 1-based → core 0-based
+        return {"index": str(int(tail[0]) - 1)}
+    except ValueError:
+        return {}
 
 def parse(token: str) -> Command:
     token = token.strip()
