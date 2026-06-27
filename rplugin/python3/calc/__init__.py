@@ -1,7 +1,9 @@
 from pynvim import plugin, command
 
 from calc.core import State, Command, step, RenderStore
-from calc.utils import notify_error, notify_info
+from calc.utils import notify_error, notify_info, notify_warn
+
+from calc.core.ops import HAS_LATEX2SYMPY
 
 from calc.render import build_layout, apply
 from calc.parse import parse
@@ -25,6 +27,9 @@ class CalcPlugin:
         self.ui: UIState | None = None
 
         self.last_cmd = None
+
+        if not HAS_LATEX2SYMPY:
+            notify_warn(nvim, "latex2sympy2 not installed — LaTeX push unavailable")
 
     def setup_keymaps(self):
         assert self.ui is not None

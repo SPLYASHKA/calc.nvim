@@ -26,7 +26,7 @@ local function check()
   if vim.fn.py3eval("importlib.util.find_spec('latex2sympy2') is not None") then
     vim.health.ok("Python module latex2sympy2 found")
   else
-    vim.health.warn("latex2sympy2 not installed — falling back to SymPy's built-in LaTeX parser (limited)", "pip install latex2sympy2")
+    vim.health.warn("latex2sympy2 not installed — LaTeX push disabled", "pip install latex2sympy2")
   end
 end
 

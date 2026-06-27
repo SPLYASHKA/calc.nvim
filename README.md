@@ -15,7 +15,8 @@
 ## Requirements
 
 - Neovim 0.9+
-- Python 3 with `pynvim`, `sympy`, `latex2sympy2`
+- Python 3 with `pynvim`, `sympy`
+- `latex2sympy2` (optional, for LaTeX push)
 
 ## Installation
 
@@ -36,8 +37,9 @@
 
 Run `:Calc` to open the calculator window.
 
-> **Note:** Make sure your Python 3 host (set via `g:python3_host_prog`) has `pynvim`, `sympy`, and
-> `latex2sympy2` installed. Run `:checkhealth` after installation to verify.
+> **Note:** Make sure your Python 3 host (set via `g:python3_host_prog`) has `pynvim` and `sympy`
+> installed. `latex2sympy2` is optional (needed for LaTeX push). Run `:checkhealth` after
+> installation to verify.
 
 ## Usage
 
@@ -121,7 +123,6 @@ ans      — push symbol
 - [ ] Healthcheck (`:checkhealth`) for sympy / latex2sympy2
 - [ ] `K` hover for info about the expression under cursor
 - [ ] Configurable keymaps
-- [ ] Fallback to built-in sympy parser when latex2sympy2 is unavailable
 
 ## License
 

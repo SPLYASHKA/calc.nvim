@@ -1,7 +1,11 @@
 from sympy import Expr, sympify, Symbol
-from sympy.parsing.latex import parse_latex
-from latex2sympy2 import latex2sympy
 from .errors import StackUnderflowError, SympyError, StackOperandError
+
+try:
+    from latex2sympy2 import latex2sympy
+    HAS_LATEX2SYMPY = True
+except ImportError:
+    HAS_LATEX2SYMPY = False
 from .state import State, push_result
 
 class Operation:
@@ -80,11 +84,15 @@ class PushOperation(Operation):
                     expr = sympify(raw)
 
                 case "latex":
-                    expr = latex2sympy(raw)
+                    if not HAS_LATEX2SYMPY:
+                        raise SympyError("latex2sympy2 not installed. Run: pip install latex2sympy2")
+                    expr = sympify(str(latex2sympy(raw)))
 
                 case _:
                     raise ValueError(f"unknown format: {fmt}")
 
+        except SympyError:
+            raise
         except Exception as e:
             raise SympyError(f"Invalid push input: {raw}") from e
 
