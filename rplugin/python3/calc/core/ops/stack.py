@@ -1,4 +1,5 @@
 from sympy import sympify
+from sympy.parsing.sympy_parser import parse_expr, standard_transformations, implicit_multiplication
 
 from ..errors import StackUnderflowError, SympyError
 from ..state import State, push_result
@@ -6,6 +7,9 @@ from . import Operation, register, pop_expr, HAS_LATEX2SYMPY
 
 if HAS_LATEX2SYMPY:
     from latex2sympy2 import latex2sympy
+
+
+_SYMPY_TRANSFORMATIONS = standard_transformations + (implicit_multiplication,)
 
 
 @register("drop")
@@ -28,7 +32,7 @@ class PushOperation(Operation):
         try:
             match fmt:
                 case "sympy":
-                    expr = sympify(raw)
+                    expr = parse_expr(raw, transformations=_SYMPY_TRANSFORMATIONS)
 
                 case "latex":
                     if not HAS_LATEX2SYMPY:
