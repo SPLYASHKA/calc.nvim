@@ -167,6 +167,7 @@ def init_calc_buffer(nvim, buf):
     nvim.api.buf_set_lines(buf, 0, -1, False, [
         "## STACK",
         "type i or :Calc to interact",
+        "? for help",
         ".",
         "",
         "## ENV",

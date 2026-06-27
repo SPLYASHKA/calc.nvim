@@ -47,6 +47,7 @@ class CalcPlugin:
             "I": ":CalcLatex<CR>",
             "s": ":Calc swap<CR>",
             "u": ":Calc undo<CR>",
+            "?": ":CalcHelp<CR>",
         }
 
         for lhs, rhs in maps.items():
@@ -103,13 +104,16 @@ class CalcPlugin:
 
             self.setup_keymaps()
 
-    def ensure_window(self):
+    def ensure_window(self, create=True):
         assert self.ui is not None
         buf = self.ui.buf
 
         for win in self.nvim.api.list_wins():
             if self.nvim.api.win_get_buf(win) == buf:
                 return win
+
+        if not create:
+            return None
 
         self.nvim.command("vsplit")
         win = self.nvim.current.window
@@ -123,17 +127,11 @@ class CalcPlugin:
     @command("CalcToggle", nargs=0)
     def calc_toggle(self):
         self.ensure_buffer()
-        buf = self.ui.buf
-
-        for win in self.nvim.api.list_wins():
-            if self.nvim.api.win_get_buf(win) == buf:
-                self.nvim.api.win_close(win, True)
-                return
-
-        self.nvim.command("vsplit")
-        win = self.nvim.current.window
-        self.nvim.api.win_set_buf(win, buf)
-        self.nvim.api.set_current_win(win)
+        win = self.ensure_window(create=False)
+        if win:
+            self.nvim.api.win_close(win, True)
+            return
+        self.ensure_window()
 
     @command("Calc", nargs='?')
     def calc(self, args):
@@ -302,6 +300,67 @@ class CalcPlugin:
             )
 
         self.nvim.command("startinsert")
+
+    @command("CalcHelp", nargs=0)
+    def calc_help(self):
+        buf = self.nvim.api.create_buf(False, True)
+        self.nvim.api.buf_set_option(buf, "filetype", "help")
+
+        lines = [
+            "INPUT",
+            "  0-9          push number",
+            "  i            command prompt",
+            "",
+            "STACK",
+            "  <CR>          dup",
+            "  dd / <BS>     drop",
+            "  s             swap",
+            "  u             undo",
+            "",
+            "MATH",
+            "  +  -  *  /   add, sub, mul, div",
+            "  ad <vars>    differentiate",
+            "  ax            expand",
+            "  af            factor",
+            "  vD            determinant",
+            "",
+            "ENV",
+            "  !             store",
+            "  @             subst",
+            "",
+            "LATEX",
+            "  I             float input window",
+            "  yl            copy LaTeX under cursor",
+            "",
+            "WINDOW",
+            "  :Calc         toggle",
+            "  :CalcToggle   toggle",
+            "",
+            "Press <C-c> to close",
+        ]
+        self.nvim.api.buf_set_lines(buf, 0, -1, False, lines)
+        self.nvim.api.buf_set_option(buf, "modifiable", False)
+
+        width = max(len(l) + 4 for l in lines)
+        height = len(lines) + 2
+
+        win = self.nvim.api.open_win(
+            buf,
+            True,
+            {
+                "relative": "editor",
+                "width": width,
+                "height": height,
+                "row": 2,
+                "col": 5,
+                "style": "minimal",
+                "border": "rounded",
+            }
+        )
+
+        self.nvim.command(f"autocmd WinLeave <buffer={buf.number}> ++once close!")
+
+        self.nvim.api.buf_set_keymap(buf, "n", "<C-c>", "<Esc>:bd!<CR>", {"silent": True})
 
     @command("CalcCommitLatex", nargs=0)
     def calc_commit_latex(self):
