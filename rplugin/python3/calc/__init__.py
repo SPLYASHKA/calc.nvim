@@ -5,7 +5,7 @@ from calc.utils import notify_error, notify_info, notify_warn
 
 from calc.core.ops import HAS_LATEX2SYMPY
 
-from calc.render import build_layout, apply
+from calc.render import build_layout, apply, init_calc_buffer
 from calc.parse import parse
 
 
@@ -99,6 +99,7 @@ class CalcPlugin:
 
             self.nvim.api.buf_set_name(self.ui.buf, "CALC")
             self.nvim.api.buf_set_option(self.ui.buf, "filetype", "markdown")
+            init_calc_buffer(self.nvim, self.ui.buf)
 
             self.setup_keymaps()
 
@@ -119,8 +120,27 @@ class CalcPlugin:
     # -------------------------
     # entrypoint
     # -------------------------
-    @command("Calc", nargs=1)
+    @command("CalcToggle", nargs=0)
+    def calc_toggle(self):
+        self.ensure_buffer()
+        buf = self.ui.buf
+
+        for win in self.nvim.api.list_wins():
+            if self.nvim.api.win_get_buf(win) == buf:
+                self.nvim.api.win_close(win, True)
+                return
+
+        self.nvim.command("vsplit")
+        win = self.nvim.current.window
+        self.nvim.api.win_set_buf(win, buf)
+        self.nvim.api.set_current_win(win)
+
+    @command("Calc", nargs='?')
     def calc(self, args):
+        if not args:
+            self.calc_toggle()
+            return
+
         self.ensure_buffer()
 
         cmd = parse(args[0])

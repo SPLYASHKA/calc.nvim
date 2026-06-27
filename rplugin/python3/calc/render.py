@@ -162,6 +162,17 @@ def dot(layout: Layout, cursor):
     layout.cursor = (dot_cursor + 1, 0) # 1-based
     return cursor
 
+def init_calc_buffer(nvim, buf):
+    """Fill a fresh calc buffer with initial layout."""
+    nvim.api.buf_set_lines(buf, 0, -1, False, [
+        "## STACK",
+        "type i or :Calc to interact",
+        ".",
+        "",
+        "## ENV",
+    ])
+
+
 def env_pretty(layout: Layout, result, cursor):
     # TODO: ugly, do better
     lines = ["## ENV"]
