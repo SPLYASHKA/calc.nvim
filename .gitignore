@@ -3,5 +3,6 @@ __pycache__/
 *.pyo
 *.pyd
 
+doc/tags
 AGENTS.md
 main.md
