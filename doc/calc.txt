@@ -1,0 +1,305 @@
+*calc.txt*    RPN symbolic calculator for Neovim
+
+==============================================================================
+CONTENTS                                                         *calc*
+
+  1. Introduction ........................... |calc-introduction|
+  2. Requirements ........................... |calc-requirements|
+  3. Commands ............................... |calc-commands|
+  4. Mappings ............................... |calc-mappings|
+  5. Stack operations ....................... |calc-stack-ops|
+  6. Math operations ........................ |calc-math-ops|
+  7. Environment operations ................. |calc-env-ops|
+  8. LaTeX input ............................ |calc-latex|
+  9. Undo ................................... |calc-undo|
+  10. Configuration ......................... |calc-config|
+  11. Examples .............................. |calc-examples|
+
+==============================================================================
+INTRODUCTION                                     *calc-introduction*
+
+calc.nvim is a Reverse Polish Notation (RPN) symbolic calculator for
+Neovim powered by SymPy. You build expressions on a stack, then apply
+operations that pop arguments and push results.
+
+The calculator runs in a dedicated buffer (filetype "markdown") with
+virtual text, extmarks, and LaTeX conceal. Each expression appears as a
+rendered LaTeX line with a pretty-print preview below it.
+
+The window can be toggled with |:Calc| (no arguments) or |:CalcToggle|.
+
+==============================================================================
+REQUIREMENTS                                     *calc-requirements*
+
+  - Neovim 0.9+
+  - Python 3 with pynvim and sympy
+  - latex2sympy2 (optional, needed only for LaTeX push)
+
+Verify your setup with: >
+  :checkhealth calc
+<
+
+==============================================================================
+COMMANDS                                                *calc-commands*
+
+  :Calc <op>         Execute an operation. If the window is closed,
+                     opens it first. See |calc-stack-ops|,
+                     |calc-math-ops|, |calc-env-ops| for operations.
+                     >
+                     :Calc +           " add top two
+                     :Calc diff x      " differentiate
+                     :Calc (x+1)*(x-1) " push expression
+<
+
+  :Calc              Without arguments, toggles the calc window
+                     (open if closed, close if open).
+
+  :CalcToggle        Same as |:Calc| without arguments.
+
+  :CalcHelp          Show a help summary in a floating window.
+                     Closes when you switch windows or press <C-c>.
+
+  :CalcRepeatLast    Repeat the last operation (mapped to `.`).
+
+  :CalcLatex         Open a floating buffer for LaTeX input.
+                     Press <CR> to commit, <C-c> to cancel.
+
+  :CalcCopyLatex     Copy the LaTeX of the expression under the
+                     cursor to the clipboard (mapped to `yl`).
+
+  :CalcPushLatexVisual  Push visual selection as LaTeX.
+
+==============================================================================
+MAPPINGS                                               *calc-mappings*
+
+The following mappings are active in the calculator buffer (normal mode):
+
+Arithmetic~
+  +          Add top two
+  -          Subtract top two
+  *          Multiply top two
+  /          Divide top two
+
+Stack manipulation~
+  <CR>       Duplicate top (|calc-dup|)
+  dd / <BS>  Drop top (|calc-drop|)
+  s          Swap top two (|calc-swap|)
+
+Environment~
+  !          Store symbol in env (|calc-store|)
+  @          Substitute from env (|calc-subst|)
+
+Navigation and input~
+  0 - 9      Push digit
+  i          Enter :Calc command
+  .          Repeat last command
+  u          Undo
+
+Operations~
+  ad         Enter :Calc diff (differentiate)
+  ax         Expand (|calc-expand|)
+  af         Factor (|calc-factor|)
+  vD         Determinant (|calc-det|)
+
+LaTeX~
+  I          Open float LaTeX input window
+  yl         Copy LaTeX under cursor
+
+Help~
+  ?          Show help float window
+
+==============================================================================
+STACK OPERATIONS                                         *calc-stack-ops*
+
+Add (+)                                                     *calc-add*
+  Pop top two, push their sum.
+  >
+  1 2 + → 3
+<
+
+Subtract (-)                                                *calc-sub*
+  Pop top two, push second minus first.
+  >
+  5 3 - → 2
+<
+
+Multiply (*)                                                *calc-mul*
+  Pop top two, push their product.
+  >
+  3 4 * → 12
+<
+
+Divide (/)                                                  *calc-div*
+  Pop top two, push second divided by first.
+  >
+  6 3 / → 2
+<
+
+Duplicate (<CR> or :Calc dup)                               *calc-dup*
+  Push a copy of the top element.
+  >
+  42 <CR> → 42 42
+<
+
+Drop (dd, <BS>, or :Calc drop)                            *calc-drop*
+  Remove the top element.
+  >
+  1 2 dd → 1
+<
+
+Swap (s or :Calc swap)                                     *calc-swap*
+  Swap the top two elements.
+  >
+  1 2 s → 2 1
+<
+
+Pick (:Calc pick N)                                        *calc-pick*
+  Push a copy of the Nth element (1-indexed from the top).
+  >
+  a b c :Calc pick 2 → a b c a
+<
+
+Undo (u or :Calc undo)                                     *calc-undo*
+  Restore the previous stack state. Each operation creates a
+  snapshot before execution. Undo pops the last snapshot.
+  Errors automatically roll back to the snapshot.
+
+==============================================================================
+MATH OPERATIONS                                             *calc-math-ops*
+
+Differentiate (:Calc diff sym ...)                      *calc-diff*
+  Differentiate the top element with respect to the given
+  symbols. Multiple symbols mean higher-order differentiation.
+  A numeric argument sets the order.
+  >
+  :Calc diff                " w.r.t. first free symbol
+  :Calc diff x              " w.r.t. x
+  :Calc diff x y            " mixed partial
+  :Calc diff x 2            " second derivative
+<
+  Input: "x^3"
+  Output: "3*x^2"
+
+Expand (:Calc expand or ax)                            *calc-expand*
+  Expand the top expression.
+  >
+  (x-1)*(x+1) ax → x^2 - 1
+<
+
+Factor (:Calc factor or af)                            *calc-factor*
+  Factor the top expression.
+  >
+  x^2 - 1 af → (x-1)*(x+1)
+<
+
+Determinant (:Calc det or vD)                           *calc-det*
+  Compute the determinant of the top expression. Must be
+  a SymPy Matrix.
+  >
+  :Calc Matrix([[1,2],[3,4]])
+  vD → -2
+<
+
+==============================================================================
+ENVIRONMENT OPERATIONS                                     *calc-env-ops*
+
+Store (! or :Calc store)                                  *calc-store*
+  Pop a Symbol (expression that evaluates to a Symbol) and
+  the value below it, then store the value in the environment
+  under that name.
+  >
+  42           " push value
+  ans          " push symbol name
+  !            " store → env["ans"] = 42
+<
+
+Substitute (@ or :Calc subst)                           *calc-subst*
+  Pop a Symbol and the expression below it, then substitute
+  the environment value for that Symbol in the expression.
+  >
+  ans + 1      " push expression
+  ans          " push symbol name
+  @            " subst → 43 (if env["ans"] = 42)
+<
+
+Eval (:Calc eval)                                         *calc-eval*
+  Substitute all environment variables into the top
+  expression.
+  >
+  x + 1        " push expression (env["x"] = 42)
+  :Calc eval   → 43
+<
+
+==============================================================================
+LATEX INPUT                                                 *calc-latex*
+
+calc.nvim supports LaTeX input through two entry points:
+
+Float window (I)~
+  Press `I` to open a floating buffer. Type LaTeX between the
+  `$$ ... $$` markers, then press <CR> to commit. The expression
+  is parsed via latex2sympy2 and pushed onto the stack.
+
+Visual selection (:CalcPushLatexVisual)~
+  Select LaTeX text in any buffer and run |:CalcPushLatexVisual|.
+  The selected text is pushed as a LaTeX expression.
+
+NOTE: LaTeX push requires the `latex2sympy2` package. If it is
+not installed, a clear error message is shown and the operation
+is safely aborted.
+
+==============================================================================
+UNDO                                                     *calc-undo-section*
+
+Every command creates a snapshot of the stack before execution.
+If the command raises an error, the stack is automatically
+rolled back to the snapshot.
+
+The `u` key or `:Calc undo` command explicitly restores the
+previous snapshot. History tracks stack order only (list of node
+IDs), not the expression store. The expression store is
+append-only and never garbage-collected.
+
+==============================================================================
+CONFIGURATION                                               *calc-config*
+
+You can set up global keymaps for calc commands in your Neovim
+config: >
+  vim.keymap.set("n", "<leader>cc", ":Calc<CR>")
+  vim.keymap.set("x", "<leader>cl", ":CalcPushLatexVisual<CR>")
+<
+
+==============================================================================
+EXAMPLES                                                    *calc-examples>
+
+Basic arithmetic~
+  :Calc 3
+  :Calc 4
+  :Calc +    →  7
+
+Derivative~
+  :Calc x^3
+  ad x       →  3*x^2
+
+LaTeX input~
+  Press I, type \frac{1}{2}, press <CR>  →  1/2
+
+Store and substitute~
+  :Calc 42        " push value
+  :Calc ans       " push symbol
+  !               " store
+  :Calc ans + 1   " push expression
+  :Calc ans       " push symbol
+  @               " substitute → 43
+
+Expand and factor~
+  :Calc (x-1)*(x+1)
+  ax               →  x^2 - 1
+  af               →  (x-1)*(x+1)
+
+Matrix determinant~
+  :Calc Matrix([[1,2],[3,4]])
+  vD               →  -2
+
+==============================================================================
+ vim:tw=78:ts=8:noet:ft=help:norl:
