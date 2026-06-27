@@ -21,6 +21,13 @@ def parse_command(name: str):
 def parse_diff(tail: list[str]) -> dict:
     return {"wrt": tail}
 
+@parse_command("pick")
+def parse_pick(tail: list[str]) -> dict:
+    if not tail:
+        return {}
+    # user-facing 1-based → core 0-based
+    return {"index": str(int(tail[0]) - 1)}
+
 def parse(token: str) -> Command:
     token = token.strip()
     parts = token.split()
