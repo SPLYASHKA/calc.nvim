@@ -61,6 +61,8 @@ class CalcPlugin:
         maps = {
             "i": ":Calc ",
             "ad": ":Calc diff ",
+            "ax": ":Calc expand<CR>",
+            "af": ":Calc factor<CR>",
             "vD": ":Calc det<CR>",
         }
         for lhs, rhs in maps.items():

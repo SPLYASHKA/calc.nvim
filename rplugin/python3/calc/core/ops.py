@@ -1,4 +1,5 @@
 from sympy import Expr, sympify, Symbol
+from sympy import expand, factor
 from .errors import StackUnderflowError, SympyError, StackOperandError
 
 try:
@@ -225,4 +226,24 @@ class DetOperation(Operation):
             raise SympyError(
                 str(e) or type(e).__name__
             )
+        push_result(state, result)
+
+@register("expand")
+class ExpandOperation(Operation):
+    def execute(self, state, **args):
+        expr = pop_expr(state)
+        try:
+            result = expand(expr)
+        except Exception as e:
+            raise SympyError(str(e))
+        push_result(state, result)
+
+@register("factor")
+class FactorOperation(Operation):
+    def execute(self, state, **args):
+        expr = pop_expr(state)
+        try:
+            result = factor(expr)
+        except Exception as e:
+            raise SympyError(str(e))
         push_result(state, result)
