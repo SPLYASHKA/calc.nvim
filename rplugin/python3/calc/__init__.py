@@ -45,6 +45,7 @@ class CalcPlugin:
             "!": ":Calc store<CR>",
             "yl": ":CalcCopyLatex<CR>",
             "I": ":CalcLatex<CR>",
+            "m": ":CalcLatexMatrix<CR>",
             "s": ":Calc swap<CR>",
             "u": ":Calc undo<CR>",
             "?": ":CalcHelp<CR>",
@@ -256,17 +257,10 @@ class CalcPlugin:
 
         self._run(self.last_cmd)
 
-    @command("CalcLatex", nargs=0)
-    def open_latex_float(self):
+    def _open_latex_float(self, template: list[str], cursor_row: int):
         buf = self.nvim.api.create_buf(False, True)
 
         self.nvim.api.buf_set_option(buf, "filetype", "tex")
-
-        template = [
-            "$$",
-            "",
-            "$$"
-        ]
 
         self.nvim.api.buf_set_lines(buf, 0, -1, False, template)
 
@@ -287,10 +281,9 @@ class CalcPlugin:
             }
         )
 
-        self.nvim.api.win_set_cursor(win, (2, 0))
+        self.nvim.api.win_set_cursor(win, (cursor_row, 0))
 
         self.nvim.api.buf_set_keymap(buf, "n", "<C-c>", "<Esc>:bd!<CR>", {"silent": True})
-        # ENTER = commit
         self.nvim.api.buf_set_keymap(
             buf,
             "n",
@@ -300,6 +293,17 @@ class CalcPlugin:
             )
 
         self.nvim.command("startinsert")
+
+    @command("CalcLatex", nargs=0)
+    def open_latex_float(self):
+        self._open_latex_float(["$$", "", "$$"], 2)
+
+    @command("CalcLatexMatrix", nargs=0)
+    def open_latex_matrix(self):
+        self._open_latex_float(
+            ["$$", "\\begin{pmatrix}", "", "\\end{pmatrix}", "$$"],
+            3,
+        )
 
     @command("CalcHelp", nargs=0)
     def calc_help(self):
@@ -329,7 +333,8 @@ class CalcPlugin:
             "  @             subst",
             "",
             "LATEX",
-            "  I             float input window",
+            "  I             float LaTeX input window",
+            "  m             float matrix input window",
             "  yl            copy LaTeX under cursor",
             "",
             "WINDOW",

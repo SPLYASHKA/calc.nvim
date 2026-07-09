@@ -64,6 +64,9 @@ COMMANDS                                                *calc-commands*
   :CalcLatex         Open a floating buffer for LaTeX input.
                      Press <CR> to commit, <C-c> to cancel.
 
+  :CalcLatexMatrix   Open a floating buffer with a `\begin{pmatrix}`
+                     environment. Press <CR> to commit, <C-c> to cancel.
+
   :CalcCopyLatex     Copy the LaTeX of the expression under the
                      cursor to the clipboard (mapped to `yl`).
 
@@ -103,6 +106,7 @@ Operations~
 
 LaTeX~
   I          Open float LaTeX input window
+  m          Open float matrix input window
   yl         Copy LaTeX under cursor
 
 Help~
@@ -239,6 +243,12 @@ Float window (I)~
   Press `I` to open a floating buffer. Type LaTeX between the
   `$$ ... $$` markers, then press <CR> to commit. The expression
   is parsed via latex2sympy2 and pushed onto the stack.
+
+Matrix input (m)~
+  Press `m` to open a floating buffer with a `\begin{pmatrix}`
+  environment. Fill in the entries (e.g. `1 & 2 \\ 3 & 4`),
+  then press <CR> to commit. The matrix LaTeX is parsed via
+  latex2sympy2 and pushed onto the stack.
 
 Visual selection (:CalcPushLatexVisual)~
   Select LaTeX text in any buffer and run |:CalcPushLatexVisual|.
